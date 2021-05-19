@@ -24,9 +24,6 @@ ui LayerWidget
                             text = "test"
                         }
                     }
-                    TextInputWidget idInput{
-                        placeholder = "ID"
-                    }
                     TextInputWidget nameInput{
                         placeholder = "Name"
                     }
