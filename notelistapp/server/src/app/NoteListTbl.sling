@@ -1,0 +1,70 @@
+import jk.sql
+import jk.mysql
+import jk.time
+
+class is NoteListDatabase:
+
+const TABLE = "note_tbl"
+
+model ModelNote 
+{
+    id as int
+    name as string
+    description as string
+    timeStampAdded as long
+    timeStampLastUpdated as long
+}
+
+func createTblNote as SQLTableInfo
+{
+    var notes = SQLTableInfo.forName(TABLE)
+    notes.addIntegerKeyColumn("id")
+    notes.addStringColumn("name")
+    notes.addStringColumn("description")
+    notes.addLongColumn("timeStampAdded")
+    notes.addLongColumn("timeStampLastUpdated")
+    return notes
+}
+
+func insertNote(db as MySQLDatabase, note as ModelNote) as ModelNote
+{
+    assert note
+    note.setTimeStampAddedValue(SystemClock.asUTCSeconds())
+    assert db.executeSync(db.prepareInsertStatementSync(TABLE, note.toDynamicMap()))
+    return note
+}
+
+func getAllNotes (db as MySQLDatabase) as DynamicMap
+{
+    var v = new vector<ModelNote>
+    var it = assert db.querySync(db.prepareQueryAllStatementSync(TABLE)):
+        return null
+    while it {
+        var o = it.next()
+        if not o:
+            break
+        var note = ModelNote.forJsonObject(o)
+        if not note:
+            continue
+        v += note
+    }
+    var data = new DynamicMap()
+    data.setObject("records", v)
+    return data
+}
+
+func updateNote(db as MySQLDatabase, id as string, note as ModelNote) as bool
+{
+    assert note
+    note.setTimeStampLastUpdatedValue(SystemClock.asUTCSeconds())
+    var criteria = new ModelNote()
+    criteria.setIdValue(String.toInteger(id))
+    return db.executeSync(db.prepareUpdateStatementSync(TABLE, criteria.toDynamicMap(), note.toDynamicMap()))
+}
+
+func deleteNote(db as MySQLDatabase, id as string) as bool
+{
+    var note = new ModelNote()
+    note.setIdValue(String.toInteger(id))
+    return db.executeSync(db.prepareDeleteStatementSync(TABLE, note.toDynamicMap()))
+}

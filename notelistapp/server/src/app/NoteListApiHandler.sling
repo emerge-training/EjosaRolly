@@ -1,0 +1,63 @@
+import jk.http.client
+import jk.http.worker
+
+class is HTTPRPCRouter #webapi2:
+
+model RequestNote
+{
+    name as string
+    description as string
+}
+
+GET "/getnotes"
+{
+    var notes = assert NoteListTbl.getAllNotes(getDatabase().getDb())
+    sendOk notes
+}
+
+POST "/insertNote"
+{
+    var reqNote = assert RequestNote.forJsonString(req.getBodyString()):
+        sendError "invalidRequest"
+    var n = new NoteListTbl.ModelNote
+    n.setName(reqNote.getName())
+    n.setDescription(reqNote.getDescription())
+    var nn = assert NoteListTbl.insertNote(getDatabase().getDb(), n):
+        sendError "failedToSave"
+    sendOk nn
+}
+
+PUT "/updatenote/:id"
+{
+    var requestData = assert RequestNote.forJsonString(req.getBodyString()):
+        sendError "invalidRequest"
+    var note = new NoteListTbl.ModelNote
+    note.setName(requestData.getName())
+    note.setDescription(requestData.getDescription())
+    assert NoteListTbl.updateNote(getDatabase().getDb(), vars.getString("id"), note):
+        sendError "failedToUpdateNote"
+    sendOk
+}
+
+DELETE "/deletenote/:id"
+{
+    assert NoteListTbl.deleteNote(getDatabase().getDb(), vars.getString("id")):
+        sendError "failedToDeleteNote"
+    sendOk
+}
+
+var db as NoteListDatabase
+var cors = NoteListConfig.getCorsUtil()
+
+func getDatabase as NoteListDatabase
+{
+    if not db {
+        db = NoteListDatabase.forContext(getCtx())
+        db.updateTables()
+    }
+
+    return db
+}
+
+func postProcess(req as HTTPWorkerRequest, resp as HTTPWorkerResponse) override:
+cors.handleWorkerRequest(req, resp)
